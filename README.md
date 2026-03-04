@@ -23,13 +23,13 @@ day before its needed, so everything is rough.
 Here's a feature list. Checked boxes indicate features that exist, unchecked
 boxes are stuff that doesn't exist.
 
-- [ ] A devcontainer that can be run Github Codespaces
-- [ ] An MQTT broker, configured for open access from containers
+- [x] A devcontainer that can be run Github Codespaces
+- [x] An MQTT broker, configured for open access from containers
 - [ ] A process which simulates being an office with a bunch of "sensors"
   - [ ] Time of day
     - [ ] Updates automatically
     - [ ] Has a configurable rate (defaulting to 1 minute per second)
-  - [ ] Outside temperature
+  - [ ] Outside air temperature (OAT)
     - [ ] Updates automatically
     - [ ] Can be overridden to a specific temperature
   - [ ] Space temperature
@@ -65,3 +65,25 @@ def time_updated(payload):
 controller.on_event("time", time_updated)
 controler.run()
 ```
+
+## MQTT topics
+
+The server process runs with a configurable base topic (defaulting to the empty
+string ""), and publishes to topics below that. As an example if the base were
+`bms_sim` then the following topics will contain sensor data:
+
+- `bms_sim/time`: The current time in minutes since midnight.
+- `bms_sim/oat`: The outside air temperature in degrees Celsius.
+- `bms_sim/temperature`: The interior temperature in degrees Celsius.
+- `bms_sim/occupancy`: Whether the space is occupied or not. "true" or "false"
+- `bms_sim/light_level`: The light level in lux.
+
+To set a value write to `bms_sim/<topic>/set` where `<topic>` is one of the topics listed above.
+
+This will cause `bms_sim/<topic>/overridden` to be set to `true`, and automatic adjustments to be
+disabled. Writing `false` to `bms_sim/<topic>/overridden` will re-enable automatic adjustments, taking
+the current sensor value as the new start point.
+
+### Time management
+
+- `bms_sim/time/rate`: The rate at which time advances in minutes per second. Default is 1.0.
