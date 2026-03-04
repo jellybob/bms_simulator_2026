@@ -25,24 +25,25 @@ boxes are stuff that doesn't exist.
 
 - [x] A devcontainer that can be run Github Codespaces
 - [x] An MQTT broker, configured for open access from containers
-- [ ] A process which simulates being an office with a bunch of "sensors"
-  - [ ] Time of day
+- [x] A process which simulates being an office with a bunch of "sensors"
+  - [x] Time of day
+    - [x] Updates automatically
+    - [x] Has a configurable rate (defaulting to 1 minute per second)
+  - [x] Outside air temperature (OAT)
     - [ ] Updates automatically
-    - [ ] Has a configurable rate (defaulting to 1 minute per second)
-  - [ ] Outside air temperature (OAT)
-    - [ ] Updates automatically
-    - [ ] Can be overridden to a specific temperature
-  - [ ] Space temperature
+    - [x] Can be overridden to a specific temperature
+  - [x] Space temperature
     - [ ] Kind of simulated?
     - [ ] Drops if the OAT is lower than interior temp
     - [ ] Climbs if the OAT is higher than interior temp
     - [ ] That scales with the differential
-  - [ ] Occupancy
+    - [x] Can be overridden to a specific temperature
+  - [x] Occupancy
     - [ ] Somewhat tied to time of day
-    - [ ] Can be overridden
-  - [ ] Light level
+    - [x] Can be overridden
+  - [x] Light level
     - [ ] Somewhat tied to time of day
-    - [ ] Can be overidden
+    - [x] Can be overidden
 - [ ] A web UI that shows/allows control of all that via an API
 
 ## The Client
