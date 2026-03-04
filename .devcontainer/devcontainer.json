@@ -38,4 +38,17 @@
 
   // Use 'postCreateCommand' to run commands after the container is created
   "postCreateCommand": "uv sync --group dev",
+
+  // Forward ports to make them accessible from the internet
+  "forwardPorts": [5173, 9001],
+  "portsAttributes": {
+    "5173": {
+      "label": "Web UI",
+      "onAutoForward": "notify",
+    },
+    "9001": {
+      "label": "Mosquitto WebSocket",
+      "onAutoForward": "notify",
+    },
+  },
 }
