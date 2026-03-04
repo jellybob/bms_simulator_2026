@@ -21,9 +21,13 @@ class Server:
 
         # Placeholder sensor values (no automatic behavior yet)
         self.oat: float = 15.0
+        self.oat_overridden: bool = False
         self.temperature: float = 22.0
+        self.temperature_overridden: bool = False
         self.occupied: bool = False
+        self.occupancy_overridden: bool = False
         self.light_level: float = 0.0
+        self.light_level_overridden: bool = False
 
     def tick(self):
         """Advance simulation by one second. Called once per second."""
@@ -41,6 +45,30 @@ class Server:
                     self.time_overridden = False
             case "time/rate/set":
                 self.time_rate = float(payload)
+            case "oat/set":
+                self.oat = float(payload)
+                self.oat_overridden = True
+            case "oat/overridden/set":
+                if payload.lower() == "false":
+                    self.oat_overridden = False
+            case "temperature/set":
+                self.temperature = float(payload)
+                self.temperature_overridden = True
+            case "temperature/overridden/set":
+                if payload.lower() == "false":
+                    self.temperature_overridden = False
+            case "occupancy/set":
+                self.occupied = payload.lower() == "true"
+                self.occupancy_overridden = True
+            case "occupancy/overridden/set":
+                if payload.lower() == "false":
+                    self.occupancy_overridden = False
+            case "light_level/set":
+                self.light_level = float(payload)
+                self.light_level_overridden = True
+            case "light_level/overridden/set":
+                if payload.lower() == "false":
+                    self.light_level_overridden = False
 
     async def run(self):
         async with aiomqtt.Client(self.host, self.port) as client:
@@ -89,6 +117,24 @@ class Server:
         overridden = str(self.time_overridden).lower()
         await client.publish(f"{base}/time/overridden", overridden, retain=True)
         await client.publish(f"{base}/oat", str(self.oat), retain=True)
+        await client.publish(
+            f"{base}/oat/overridden", str(self.oat_overridden).lower(), retain=True
+        )
         await client.publish(f"{base}/temperature", str(self.temperature), retain=True)
+        await client.publish(
+            f"{base}/temperature/overridden",
+            str(self.temperature_overridden).lower(),
+            retain=True,
+        )
         await client.publish(f"{base}/occupancy", "true" if self.occupied else "false", retain=True)
+        await client.publish(
+            f"{base}/occupancy/overridden",
+            str(self.occupancy_overridden).lower(),
+            retain=True,
+        )
         await client.publish(f"{base}/light_level", str(self.light_level), retain=True)
+        await client.publish(
+            f"{base}/light_level/overridden",
+            str(self.light_level_overridden).lower(),
+            retain=True,
+        )

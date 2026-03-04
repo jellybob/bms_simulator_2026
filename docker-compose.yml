@@ -3,11 +3,24 @@ services:
     image: eclipse-mosquitto
     ports:
       - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
 
   server:
     build: .
     volumes:
       - .:/app
     command: bms-sim-server mqtt://broker/bms_sim
+    depends_on:
+      - broker
+
+  web:
+    build: ./web
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./web:/app
+      - /app/node_modules
     depends_on:
       - broker
