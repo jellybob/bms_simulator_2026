@@ -13,8 +13,8 @@ COPY uv.lock .
 COPY pyproject.toml .
 COPY README.md .
 
-# Install dependencies (creates venv at /var/uv/venv and installs everything)
-RUN uv sync
+# Install dependencies including dev dependencies (creates venv at /var/uv/venv and installs everything)
+RUN uv sync --group dev
 
 # Copy the rest of the application
 COPY . .
