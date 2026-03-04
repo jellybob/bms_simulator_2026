@@ -4,7 +4,13 @@ version = "0.1.0"
 description = "BMS Simulator 2026"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "aiomqtt >= 2",
+    "click >= 8",
+]
+
+[project.scripts]
+bms-sim-server = "bms_simulator.cli:main"
 
 [dependency-groups]
 dev = [

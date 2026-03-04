@@ -8,3 +8,6 @@ services:
     build: .
     volumes:
       - .:/app
+    command: bms-sim-server mqtt://broker/bms_sim
+    depends_on:
+      - broker

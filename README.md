@@ -81,9 +81,10 @@ string ""), and publishes to topics below that. As an example if the base were
 To set a value write to `bms_sim/<topic>/set` where `<topic>` is one of the topics listed above.
 
 This will cause `bms_sim/<topic>/overridden` to be set to `true`, and automatic adjustments to be
-disabled. Writing `false` to `bms_sim/<topic>/overridden` will re-enable automatic adjustments, taking
+disabled. Writing `false` to `bms_sim/<topic>/overridden/set` will re-enable automatic adjustments, taking
 the current sensor value as the new start point.
 
 ### Time management
 
 - `bms_sim/time/rate`: The rate at which time advances in minutes per second. Default is 1.0.
+  - To change the rate, write to `bms_sim/time/rate/set`.
