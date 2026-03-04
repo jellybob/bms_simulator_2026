@@ -45,10 +45,12 @@
     "5173": {
       "label": "Web UI",
       "onAutoForward": "notify",
+      "visibility": "public",
     },
     "9001": {
       "label": "Mosquitto WebSocket",
       "onAutoForward": "notify",
+      "visibility": "public",
     },
   },
 }

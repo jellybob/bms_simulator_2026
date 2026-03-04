@@ -20,7 +20,9 @@ export function useMqtt() {
 
   const connected = ref(false);
 
-  const brokerUrl = `ws://${window.location.hostname}:9001`;
+  // Use wss:// if the page is served over https://, otherwise use ws://
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const brokerUrl = `${protocol}//${window.location.hostname}:9001`;
   const client = mqtt.connect(brokerUrl);
 
   client.on("connect", () => {
@@ -35,9 +37,11 @@ export function useMqtt() {
   const topicMap = {
     [`${BASE_TOPIC}/time`]: (v) => (state.time = parseFloat(v)),
     [`${BASE_TOPIC}/time/rate`]: (v) => (state.timeRate = parseFloat(v)),
-    [`${BASE_TOPIC}/time/overridden`]: (v) => (state.timeOverridden = v === "true"),
+    [`${BASE_TOPIC}/time/overridden`]: (v) =>
+      (state.timeOverridden = v === "true"),
     [`${BASE_TOPIC}/oat`]: (v) => (state.oat = parseFloat(v)),
-    [`${BASE_TOPIC}/oat/overridden`]: (v) => (state.oatOverridden = v === "true"),
+    [`${BASE_TOPIC}/oat/overridden`]: (v) =>
+      (state.oatOverridden = v === "true"),
     [`${BASE_TOPIC}/temperature`]: (v) => (state.temperature = parseFloat(v)),
     [`${BASE_TOPIC}/temperature/overridden`]: (v) =>
       (state.temperatureOverridden = v === "true"),
