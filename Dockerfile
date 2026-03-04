@@ -9,15 +9,10 @@ ENV UV_PROJECT_ENVIRONMENT=/var/uv/venv
 WORKDIR /app
 
 # Copy dependency files first for better caching
-COPY uv.lock .
-COPY pyproject.toml .
-COPY README.md .
+COPY . .
 
 # Install dependencies including dev dependencies (creates venv at /var/uv/venv and installs everything)
 RUN uv sync --group dev
-
-# Copy the rest of the application
-COPY . .
 
 # Add the venv to PATH so we can run commands directly
 ENV PATH="${UV_PROJECT_ENVIRONMENT}/bin:$PATH"
