@@ -21,8 +21,9 @@ export function useMqtt() {
   const connected = ref(false);
 
   // Use wss:// if the page is served over https://, otherwise use ws://
+  // Connect to /mqtt path which is proxied by nginx to the broker
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  const brokerUrl = `${protocol}//${window.location.hostname}:9001`;
+  const brokerUrl = `${protocol}//${window.location.host}/mqtt`;
   const client = mqtt.connect(brokerUrl);
 
   client.on("connect", () => {

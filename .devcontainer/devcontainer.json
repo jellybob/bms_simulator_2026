@@ -40,15 +40,10 @@
   "postCreateCommand": "uv sync --group dev",
 
   // Forward ports to make them accessible from the internet
-  "forwardPorts": [5173, 9001],
+  "forwardPorts": [8080],
   "portsAttributes": {
-    "5173": {
-      "label": "Web UI",
-      "onAutoForward": "notify",
-      "visibility": "public",
-    },
-    "9001": {
-      "label": "Mosquitto WebSocket",
+    "8080": {
+      "label": "Nginx Proxy (Web UI + MQTT)",
       "onAutoForward": "notify",
       "visibility": "public",
     },
