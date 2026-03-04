@@ -1,0 +1,10 @@
+services:
+  broker:
+    image: eclipse-mosquitto
+    ports:
+      - "1883:1883"
+
+  server:
+    build: .
+    volumes:
+      - .:/app
