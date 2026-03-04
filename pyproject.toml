@@ -8,6 +8,7 @@ dependencies = []
 
 [dependency-groups]
 dev = [
+    "pytest >= 9",
     "ruff == 0.15.4",
     "ty >= 0.0.20",
 ]
@@ -37,6 +38,10 @@ ignore = []
 
 [tool.ruff.lint.isort]
 known-first-party = ["bms_simulator"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
 
 [tool.ty]
 # ty configuration
