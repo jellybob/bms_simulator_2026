@@ -30,19 +30,19 @@ boxes are stuff that doesn't exist.
     - [x] Updates automatically
     - [x] Has a configurable rate (defaulting to 1 minute per second)
   - [x] Outside air temperature (OAT)
-    - [ ] Updates automatically
+    - [x] Updates automatically
     - [x] Can be overridden to a specific temperature
   - [x] Space temperature
-    - [ ] Kind of simulated?
-    - [ ] Drops if the OAT is lower than interior temp
-    - [ ] Climbs if the OAT is higher than interior temp
-    - [ ] That scales with the differential
+    - [x] Kind of simulated?
+    - [x] Drops if the OAT is lower than interior temp
+    - [x] Climbs if the OAT is higher than interior temp
+    - [x] That scales with the differential
     - [x] Can be overridden to a specific temperature
   - [x] Occupancy
-    - [ ] Somewhat tied to time of day
+    - [x] Somewhat tied to time of day
     - [x] Can be overridden
   - [x] Light level
-    - [ ] Somewhat tied to time of day
+    - [x] Somewhat tied to time of day
     - [x] Can be overidden
 - [ ] A web UI that shows/allows control of all that via an API
 
