@@ -16,7 +16,7 @@ OAT_AMPLITUDE = 5.0
 OAT_PEAK_MINUTE = 900  # 3:00 PM — hottest point
 
 # Interior temperature drift rate
-THERMAL_RATE = 0.001  # °C per minute per degree of differential
+THERMAL_RATE = 0.01  # °C per minute per degree of differential
 
 # Light level: half-sine from sunrise to sunset
 SUNRISE = 360  # 6:00 AM
