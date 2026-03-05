@@ -13,6 +13,17 @@ services:
     command: bms-sim-server mqtt://broker/bms_sim
     depends_on:
       - broker
+    restart: unless-stopped
+
+  # Development container for writing controller code
+  client:
+    build: .
+    volumes:
+      - .:/app
+    command: sleep infinity
+    depends_on:
+      - web
+      - server
 
   web:
     build: ./web

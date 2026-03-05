@@ -1,3 +1,0 @@
-services:
-  server:
-    command: sleep infinity
