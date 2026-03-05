@@ -7,6 +7,7 @@ from bms_simulator.server import (
     MINUTES_PER_DAY,
     OAT_AMPLITUDE,
     OAT_BASE,
+    WINDOW_TRANSMISSION_FACTOR,
     Server,
     compute_oat,
 )
@@ -130,18 +131,32 @@ def test_handle_occupancy_override_clear():
     assert server.occupancy_overridden is False
 
 
-def test_handle_light_level_set():
+def test_handle_exterior_light_level_set():
     server = make_server()
-    server.handle_message("light_level/set", "500.0")
-    assert server.light_level == 500.0
-    assert server.light_level_overridden is True
+    server.handle_message("exterior_light_level/set", "500.0")
+    assert server.exterior_light_level == 500.0
+    assert server.exterior_light_level_overridden is True
 
 
-def test_handle_light_level_override_clear():
+def test_handle_exterior_light_level_override_clear():
     server = make_server()
-    server.light_level_overridden = True
-    server.handle_message("light_level/overridden/set", "false")
-    assert server.light_level_overridden is False
+    server.exterior_light_level_overridden = True
+    server.handle_message("exterior_light_level/overridden/set", "false")
+    assert server.exterior_light_level_overridden is False
+
+
+def test_handle_interior_light_level_set():
+    server = make_server()
+    server.handle_message("interior_light_level/set", "500.0")
+    assert server.interior_light_level == 500.0
+    assert server.interior_light_level_overridden is True
+
+
+def test_handle_interior_light_level_override_clear():
+    server = make_server()
+    server.interior_light_level_overridden = True
+    server.handle_message("interior_light_level/overridden/set", "false")
+    assert server.interior_light_level_overridden is False
 
 
 def test_initial_state():
@@ -155,8 +170,10 @@ def test_initial_state():
     assert server.temperature_overridden is False
     assert not server.occupied
     assert server.occupancy_overridden is False
-    assert server.light_level == 0.0
-    assert server.light_level_overridden is False
+    assert server.exterior_light_level == 0.0
+    assert server.exterior_light_level_overridden is False
+    assert server.interior_light_level == 0.0
+    assert server.interior_light_level_overridden is False
     assert all(not a.on for a in server.actuators.values())
     assert server.power_usage == 0.0
     assert server.cumulative_power_usage == 0.0
@@ -267,29 +284,56 @@ def test_occupancy_respects_override():
 # --- Light level automation tests ---
 
 
-def test_light_level_zero_at_night():
+def test_exterior_light_zero_at_night():
     server = make_server()
     server.time = 0.0  # midnight
     server.time_overridden = True
     server.tick()
-    assert server.light_level == 0.0
+    assert server.exterior_light_level == 0.0
+    assert server.interior_light_level == 0.0
 
 
-def test_light_level_peaks_near_noon():
+def test_exterior_light_peaks_near_noon():
     server = make_server()
     # Midpoint of sunrise(360)..sunset(1200) = 780
     server.time = 779.0
     server.time_overridden = True
     server.tick()
-    assert server.light_level > LIGHT_PEAK_LUX * 0.95
+    assert server.exterior_light_level > LIGHT_PEAK_LUX * 0.95
 
 
-def test_light_level_respects_override():
+def test_interior_light_is_attenuated_exterior():
     server = make_server()
-    server.light_level = 42.0
-    server.light_level_overridden = True
+    server.time = 779.0  # near midday peak
+    server.time_overridden = True
     server.tick()
-    assert server.light_level == 42.0
+    expected = server.exterior_light_level * WINDOW_TRANSMISSION_FACTOR
+    assert abs(server.interior_light_level - expected) < 0.01
+
+
+def test_exterior_light_respects_override():
+    server = make_server()
+    server.exterior_light_level = 42.0
+    server.exterior_light_level_overridden = True
+    server.tick()
+    assert server.exterior_light_level == 42.0
+
+
+def test_interior_light_respects_override():
+    server = make_server()
+    server.interior_light_level = 42.0
+    server.interior_light_level_overridden = True
+    server.tick()
+    assert server.interior_light_level == 42.0
+
+
+def test_interior_light_uses_overridden_exterior():
+    server = make_server()
+    server.exterior_light_level = 100.0
+    server.exterior_light_level_overridden = True
+    server.tick()
+    expected = 100.0 * WINDOW_TRANSMISSION_FACTOR
+    assert abs(server.interior_light_level - expected) < 0.01
 
 
 # --- Day wrap randomization test ---
@@ -429,7 +473,8 @@ def test_lights_add_lux_at_night():
     server.time_overridden = True
     server.actuators["lights"].on = True
     server.tick()
-    assert server.light_level == LIGHTS_LUX_CONTRIBUTION
+    assert server.exterior_light_level == 0.0
+    assert server.interior_light_level == LIGHTS_LUX_CONTRIBUTION
 
 
 def test_lights_add_to_ambient():
@@ -438,16 +483,17 @@ def test_lights_add_to_ambient():
     server.time_overridden = True
     server.actuators["lights"].on = True
     server.tick()
-    assert server.light_level > LIGHT_PEAK_LUX
+    expected = server.exterior_light_level * WINDOW_TRANSMISSION_FACTOR + LIGHTS_LUX_CONTRIBUTION
+    assert abs(server.interior_light_level - expected) < 0.01
 
 
-def test_lights_respect_light_level_override():
+def test_lights_respect_interior_light_level_override():
     server = make_server()
-    server.light_level = 100.0
-    server.light_level_overridden = True
+    server.interior_light_level = 100.0
+    server.interior_light_level_overridden = True
     server.actuators["lights"].on = True
     server.tick()
-    assert server.light_level == 100.0
+    assert server.interior_light_level == 100.0
 
 
 # --- Power usage tests ---

@@ -21,7 +21,7 @@ THERMAL_RATE = 0.01  # °C per minute per degree of differential
 # Light level: half-sine from sunrise to sunset
 SUNRISE = 360  # 6:00 AM
 SUNSET = 1200  # 8:00 PM
-LIGHT_PEAK_LUX = 500.0
+LIGHT_PEAK_LUX = 2000.0
 
 # Occupancy: business hours
 BUSINESS_START = 480  # 8:00 AM
@@ -30,6 +30,9 @@ BUSINESS_END = 1080  # 6:00 PM
 # Daily randomness
 OCCUPANCY_JITTER = 30  # ±30 min
 LIGHT_JITTER = 20  # ±20 min
+
+# Window transmission factor (fraction of exterior light reaching interior)
+WINDOW_TRANSMISSION_FACTOR = 0.7
 
 # Actuator specifications
 HEATER_POWER_KW = 800
@@ -84,8 +87,10 @@ class Server:
         self.temperature_overridden: bool = False
         self.occupied: bool = False
         self.occupancy_overridden: bool = False
-        self.light_level: float = 0.0
-        self.light_level_overridden: bool = False
+        self.exterior_light_level: float = 0.0
+        self.exterior_light_level_overridden: bool = False
+        self.interior_light_level: float = 0.0
+        self.interior_light_level_overridden: bool = False
 
         # Actuators
         self.actuators: dict[str, Actuator] = {
@@ -137,12 +142,17 @@ class Server:
             end = BUSINESS_END + self._occupancy_end_offset
             self.occupied = start <= self.time < end
 
-        if not self.light_level_overridden:
-            self.light_level = compute_light_level(
+        if not self.exterior_light_level_overridden:
+            self.exterior_light_level = compute_light_level(
                 self.time, self._light_start_offset, self._light_end_offset
             )
+
+        if not self.interior_light_level_overridden:
+            self.interior_light_level = (
+                self.exterior_light_level * WINDOW_TRANSMISSION_FACTOR
+            )
             if self.actuators["lights"].on:
-                self.light_level += LIGHTS_LUX_CONTRIBUTION
+                self.interior_light_level += LIGHTS_LUX_CONTRIBUTION
 
         self.power_usage = sum(a.power_kw for a in self.actuators.values() if a.on)
         self.cumulative_power_usage += self.power_usage * (self.time_rate / 60.0)
@@ -183,12 +193,18 @@ class Server:
             case "occupancy/overridden/set":
                 if payload.lower() == "false":
                     self.occupancy_overridden = False
-            case "light_level/set":
-                self.light_level = float(payload)
-                self.light_level_overridden = True
-            case "light_level/overridden/set":
+            case "exterior_light_level/set":
+                self.exterior_light_level = float(payload)
+                self.exterior_light_level_overridden = True
+            case "exterior_light_level/overridden/set":
                 if payload.lower() == "false":
-                    self.light_level_overridden = False
+                    self.exterior_light_level_overridden = False
+            case "interior_light_level/set":
+                self.interior_light_level = float(payload)
+                self.interior_light_level_overridden = True
+            case "interior_light_level/overridden/set":
+                if payload.lower() == "false":
+                    self.interior_light_level_overridden = False
 
     async def run(self):
         async with aiomqtt.Client(self.host, self.port) as client:
@@ -252,10 +268,24 @@ class Server:
             str(self.occupancy_overridden).lower(),
             retain=True,
         )
-        await client.publish(f"{base}/light_level", str(self.light_level), retain=True)
         await client.publish(
-            f"{base}/light_level/overridden",
-            str(self.light_level_overridden).lower(),
+            f"{base}/exterior_light_level",
+            str(self.exterior_light_level),
+            retain=True,
+        )
+        await client.publish(
+            f"{base}/exterior_light_level/overridden",
+            str(self.exterior_light_level_overridden).lower(),
+            retain=True,
+        )
+        await client.publish(
+            f"{base}/interior_light_level",
+            str(self.interior_light_level),
+            retain=True,
+        )
+        await client.publish(
+            f"{base}/interior_light_level/overridden",
+            str(self.interior_light_level_overridden).lower(),
             retain=True,
         )
         for topic, actuator in self.actuators.items():

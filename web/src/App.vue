@@ -25,11 +25,16 @@ const { state, connected, publish } = useMqtt();
           :temperature="state.temperature"
           :oat="state.oat"
           :occupancy="state.occupancy"
-          :lightLevel="state.lightLevel"
+          :exteriorLightLevel="state.exteriorLightLevel"
+          :interiorLightLevel="state.interiorLightLevel"
+          :heat="state.heat"
+          :airCon="state.airCon"
+          :lights="state.lights"
           :temperatureOverridden="state.temperatureOverridden"
           :oatOverridden="state.oatOverridden"
           :occupancyOverridden="state.occupancyOverridden"
-          :lightLevelOverridden="state.lightLevelOverridden"
+          :exteriorLightLevelOverridden="state.exteriorLightLevelOverridden"
+          :interiorLightLevelOverridden="state.interiorLightLevelOverridden"
         />
       </section>
 
@@ -81,11 +86,20 @@ const { state, connected, publish } = useMqtt();
                     @publish="publish"
                   />
                   <SensorCard
-                    label="Light Level"
-                    :value="state.lightLevel"
+                    label="Exterior Light"
+                    :value="state.exteriorLightLevel"
                     unit="lux"
-                    topic="light_level"
-                    :overridden="state.lightLevelOverridden"
+                    topic="exterior_light_level"
+                    :overridden="state.exteriorLightLevelOverridden"
+                    icon="☀"
+                    @publish="publish"
+                  />
+                  <SensorCard
+                    label="Interior Light"
+                    :value="state.interiorLightLevel"
+                    unit="lux"
+                    topic="interior_light_level"
+                    :overridden="state.interiorLightLevelOverridden"
                     icon="💡"
                     @publish="publish"
                   />

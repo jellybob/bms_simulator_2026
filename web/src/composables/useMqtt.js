@@ -14,8 +14,10 @@ export function useMqtt() {
     temperatureOverridden: false,
     occupancy: false,
     occupancyOverridden: false,
-    lightLevel: 0,
-    lightLevelOverridden: false,
+    exteriorLightLevel: 0,
+    exteriorLightLevelOverridden: false,
+    interiorLightLevel: 0,
+    interiorLightLevelOverridden: false,
     // Actuators
     heat: false,
     airCon: false,
@@ -56,9 +58,14 @@ export function useMqtt() {
     [`${BASE_TOPIC}occupancy`]: (v) => (state.occupancy = v === "true"),
     [`${BASE_TOPIC}occupancy/overridden`]: (v) =>
       (state.occupancyOverridden = v === "true"),
-    [`${BASE_TOPIC}light_level`]: (v) => (state.lightLevel = parseFloat(v)),
-    [`${BASE_TOPIC}light_level/overridden`]: (v) =>
-      (state.lightLevelOverridden = v === "true"),
+    [`${BASE_TOPIC}exterior_light_level`]: (v) =>
+      (state.exteriorLightLevel = parseFloat(v)),
+    [`${BASE_TOPIC}exterior_light_level/overridden`]: (v) =>
+      (state.exteriorLightLevelOverridden = v === "true"),
+    [`${BASE_TOPIC}interior_light_level`]: (v) =>
+      (state.interiorLightLevel = parseFloat(v)),
+    [`${BASE_TOPIC}interior_light_level/overridden`]: (v) =>
+      (state.interiorLightLevelOverridden = v === "true"),
     // Actuators
     [`${BASE_TOPIC}heat`]: (v) => (state.heat = v === "true"),
     [`${BASE_TOPIC}air_con`]: (v) => (state.airCon = v === "true"),
