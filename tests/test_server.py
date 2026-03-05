@@ -1,5 +1,9 @@
 from bms_simulator.server import (
+    AC_POWER_KW,
+    HEATER_POWER_KW,
     LIGHT_PEAK_LUX,
+    LIGHTS_LUX_CONTRIBUTION,
+    LIGHTS_POWER_KW,
     MINUTES_PER_DAY,
     OAT_AMPLITUDE,
     OAT_BASE,
@@ -153,6 +157,9 @@ def test_initial_state():
     assert server.occupancy_overridden is False
     assert server.light_level == 0.0
     assert server.light_level_overridden is False
+    assert all(not a.on for a in server.actuators.values())
+    assert server.power_usage == 0.0
+    assert server.cumulative_power_usage == 0.0
 
 
 # --- OAT automation tests ---
@@ -306,3 +313,208 @@ def test_midnight_wrap_randomizes_day():
         server._light_end_offset,
     ]
     assert any(o != 0.0 for o in offsets)
+
+
+# --- Actuator control tests ---
+
+
+def test_handle_heater_on():
+    server = make_server()
+    server.handle_message("heat/set", "true")
+    assert server.actuators["heat"].on is True
+
+
+def test_handle_heater_off():
+    server = make_server()
+    server.actuators["heat"].on = True
+    server.handle_message("heat/set", "false")
+    assert server.actuators["heat"].on is False
+
+
+def test_handle_ac_on():
+    server = make_server()
+    server.handle_message("air_con/set", "true")
+    assert server.actuators["air_con"].on is True
+
+
+def test_handle_ac_off():
+    server = make_server()
+    server.actuators["air_con"].on = True
+    server.handle_message("air_con/set", "false")
+    assert server.actuators["air_con"].on is False
+
+
+def test_handle_lights_on():
+    server = make_server()
+    server.handle_message("lights/set", "true")
+    assert server.actuators["lights"].on is True
+
+
+def test_handle_lights_off():
+    server = make_server()
+    server.actuators["lights"].on = True
+    server.handle_message("lights/set", "false")
+    assert server.actuators["lights"].on is False
+
+
+def test_actuator_set_case_insensitive():
+    server = make_server()
+    server.handle_message("heat/set", "True")
+    assert server.actuators["heat"].on is True
+    server.handle_message("heat/set", "FALSE")
+    assert server.actuators["heat"].on is False
+
+
+# --- Heater effects on temperature ---
+
+
+def test_heater_increases_temperature():
+    server = make_server()
+    server.temperature = 20.0
+    server.oat = 20.0  # No OAT drift
+    server.oat_overridden = True
+    server.actuators["heat"].on = True
+    server.tick()
+    assert server.temperature > 20.0
+
+
+def test_heater_respects_temperature_override():
+    server = make_server()
+    server.temperature = 20.0
+    server.temperature_overridden = True
+    server.actuators["heat"].on = True
+    server.tick()
+    assert server.temperature == 20.0
+
+
+# --- AC effects on temperature ---
+
+
+def test_ac_decreases_temperature():
+    server = make_server()
+    server.temperature = 25.0
+    server.oat = 25.0  # No OAT drift
+    server.oat_overridden = True
+    server.actuators["air_con"].on = True
+    server.tick()
+    assert server.temperature < 25.0
+
+
+def test_ac_respects_temperature_override():
+    server = make_server()
+    server.temperature = 25.0
+    server.temperature_overridden = True
+    server.actuators["air_con"].on = True
+    server.tick()
+    assert server.temperature == 25.0
+
+
+def test_heater_and_ac_cancel_out():
+    server = make_server()
+    server.temperature = 22.0
+    server.oat = 22.0  # No OAT drift
+    server.oat_overridden = True
+    server.actuators["heat"].on = True
+    server.actuators["air_con"].on = True
+    server.tick()
+    assert abs(server.temperature - 22.0) < 0.001
+
+
+# --- Lights effects on light level ---
+
+
+def test_lights_add_lux_at_night():
+    server = make_server()
+    server.time = 0.0  # Midnight
+    server.time_overridden = True
+    server.actuators["lights"].on = True
+    server.tick()
+    assert server.light_level == LIGHTS_LUX_CONTRIBUTION
+
+
+def test_lights_add_to_ambient():
+    server = make_server()
+    server.time = 779.0  # Near midday peak
+    server.time_overridden = True
+    server.actuators["lights"].on = True
+    server.tick()
+    assert server.light_level > LIGHT_PEAK_LUX
+
+
+def test_lights_respect_light_level_override():
+    server = make_server()
+    server.light_level = 100.0
+    server.light_level_overridden = True
+    server.actuators["lights"].on = True
+    server.tick()
+    assert server.light_level == 100.0
+
+
+# --- Power usage tests ---
+
+
+def test_power_usage_single_actuator():
+    server = make_server()
+    server.actuators["heat"].on = True
+    server.tick()
+    assert server.power_usage == HEATER_POWER_KW
+
+
+def test_power_usage_multiple_actuators():
+    server = make_server()
+    server.actuators["heat"].on = True
+    server.actuators["air_con"].on = True
+    server.actuators["lights"].on = True
+    server.tick()
+    assert server.power_usage == HEATER_POWER_KW + AC_POWER_KW + LIGHTS_POWER_KW
+
+
+def test_power_usage_zero_when_all_off():
+    server = make_server()
+    server.actuators["heat"].on = True
+    server.tick()
+    assert server.power_usage == HEATER_POWER_KW
+    server.actuators["heat"].on = False
+    server.tick()
+    assert server.power_usage == 0.0
+
+
+# --- Cumulative power usage tests ---
+
+
+def test_cumulative_power_accumulates():
+    server = make_server()
+    server.time_rate = 1.0
+    server.actuators["heat"].on = True
+    server.tick()
+    expected = HEATER_POWER_KW / 60.0
+    assert abs(server.cumulative_power_usage - expected) < 0.001
+
+
+def test_cumulative_power_scales_with_time_rate():
+    server = make_server()
+    server.time_rate = 60.0  # 1 hour per tick
+    server.actuators["heat"].on = True
+    server.tick()
+    assert abs(server.cumulative_power_usage - HEATER_POWER_KW) < 0.001
+
+
+def test_cumulative_power_resets_at_midnight():
+    server = make_server()
+    server.time = MINUTES_PER_DAY - 0.5
+    server.time_rate = 1.0
+    server.actuators["heat"].on = True
+    server.tick()  # Wraps past midnight, resets cumulative then accumulates
+    # Should only have the post-reset accumulation
+    expected = HEATER_POWER_KW / 60.0
+    assert abs(server.cumulative_power_usage - expected) < 0.001
+
+
+def test_cumulative_power_accumulates_over_ticks():
+    server = make_server()
+    server.time_rate = 1.0
+    server.actuators["heat"].on = True
+    server.tick()
+    first = server.cumulative_power_usage
+    server.tick()
+    assert abs(server.cumulative_power_usage - 2 * first) < 0.001
