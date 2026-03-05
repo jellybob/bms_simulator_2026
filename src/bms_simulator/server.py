@@ -148,9 +148,7 @@ class Server:
             )
 
         if not self.interior_light_level_overridden:
-            self.interior_light_level = (
-                self.exterior_light_level * WINDOW_TRANSMISSION_FACTOR
-            )
+            self.interior_light_level = self.exterior_light_level * WINDOW_TRANSMISSION_FACTOR
             if self.actuators["lights"].on:
                 self.interior_light_level += LIGHTS_LUX_CONTRIBUTION
 

@@ -20,31 +20,47 @@ day before its needed, so everything is rough.
 
 ## The Server
 
-Here's a feature list. Checked boxes indicate features that exist, unchecked
-boxes are stuff that doesn't exist.
+The server runs a simulation loop, calling the `tick` method once a second
+which is then responsible for updating the environment's state based on
+conditions. Over the course of a day various aspects of the office are updated
+such as temperature and occupancy.
 
-- [x] A devcontainer that can be run Github Codespaces
-- [x] An MQTT broker, configured for open access from containers
-- [x] A process which simulates being an office with a bunch of "sensors"
-  - [x] Time of day
-    - [x] Updates automatically
-    - [x] Has a configurable rate (defaulting to 1 minute per second)
-  - [x] Outside air temperature (OAT)
-    - [x] Updates automatically
-    - [x] Can be overridden to a specific temperature
-  - [x] Space temperature
-    - [x] Kind of simulated?
-    - [x] Drops if the OAT is lower than interior temp
-    - [x] Climbs if the OAT is higher than interior temp
-    - [x] That scales with the differential
-    - [x] Can be overridden to a specific temperature
-  - [x] Occupancy
-    - [x] Somewhat tied to time of day
-    - [x] Can be overridden
-  - [x] Light level
-    - [x] Somewhat tied to time of day
-    - [x] Can be overidden
-- [ ] A web UI that shows/allows control of all that via an API
+The following devices exist, which are matched here with the MQTT topic.
+
+### Sensors
+
+Report environmental state:
+
+- Time of day in minutes since midnight: `time`
+  - Has an attached simulation rate setting how many minutes advance in each second
+    of realtime. `time/rate`
+- Outside Air Temperature (OAT) in degrees celsius: `oat`
+  - Varies over the course of a day
+- Occupancy, which is a simple boolean: `occupancy`
+- Light level in lux `light_level`
+  - Varies with time of day
+- Power usage in KW `power_usage`
+  - The sum of all actuators currently drawing power
+- Daily cumulative power usage in KWh `cumulative_power_usage`
+  - Tracks how much power has been drawn over the course of the day
+  - Resets to 0 daily
+
+### Acctuators
+
+Influence the environment by contributing something, such as heat or light. All of
+these require power to run, which will be tracked.
+
+- Heater: `heat`
+  - Draws 800KW while on
+  - Contributes heat into the environment, similar to outside air temperature
+  - When on provides 10 celsius of heat
+- Air conditioner: `air_con`
+  - Draws 1000KW while on
+  - Removes heat from the environment, the opposite of a heater
+  - When on removes 10 celsius of heat
+- Lights: `lights`
+  - Draws 80KW while on
+  - Adds 400 lux of ambient light
 
 ## The Client
 
@@ -57,14 +73,14 @@ haven't yet written it):
 
 ```python
 from bms_simulator import controller
+from bms_simulator.controller import State, SetFn
 
-def time_updated(payload):
-    print(f"The time is now {payload.value}")
-    if time.value >= 900 and time.value <= 540:
-        controller.send("lights/set", 1.0)
+def update(state: State, previous: State, set: SetFn):
+    print(f"The time is now {state.time}")
+    if state.time >= 900 and state.time <= 540:
+        set("lights", True)
  
-controller.on_event("time", time_updated)
-controler.run()
+controler.run(update)
 ```
 
 ## MQTT topics
