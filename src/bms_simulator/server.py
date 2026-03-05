@@ -1,11 +1,52 @@
 import asyncio
 import logging
+import math
+import random
 
 import aiomqtt
 
 log = logging.getLogger(__name__)
 
 MINUTES_PER_DAY = 1440
+
+# Outside air temperature: cosine curve across the day
+OAT_BASE = 15.0
+OAT_AMPLITUDE = 5.0
+OAT_PEAK_MINUTE = 900  # 3:00 PM — hottest point
+
+# Interior temperature drift rate
+THERMAL_RATE = 0.001  # °C per minute per degree of differential
+
+# Light level: half-sine from sunrise to sunset
+SUNRISE = 360   # 6:00 AM
+SUNSET = 1200   # 8:00 PM
+LIGHT_PEAK_LUX = 500.0
+
+# Occupancy: business hours
+BUSINESS_START = 480   # 8:00 AM
+BUSINESS_END = 1080    # 6:00 PM
+
+# Daily randomness
+OCCUPANCY_JITTER = 30  # ±30 min
+LIGHT_JITTER = 20      # ±20 min
+
+
+def compute_oat(time: float) -> float:
+    """Compute outside air temperature from a daily cosine curve."""
+    angle = 2 * math.pi * (time - OAT_PEAK_MINUTE) / MINUTES_PER_DAY
+    return OAT_BASE + OAT_AMPLITUDE * math.cos(angle)
+
+
+def compute_light_level(
+    time: float, start_offset: float = 0.0, end_offset: float = 0.0
+) -> float:
+    """Compute light level as a half-sine between sunrise and sunset."""
+    sunrise = SUNRISE + start_offset
+    sunset = SUNSET + end_offset
+    if time < sunrise or time >= sunset:
+        return 0.0
+    progress = (time - sunrise) / (sunset - sunrise)
+    return LIGHT_PEAK_LUX * math.sin(progress * math.pi)
 
 
 class Server:
@@ -19,7 +60,7 @@ class Server:
         self.time_rate: float = 1.0  # minutes per second
         self.time_overridden: bool = False
 
-        # Placeholder sensor values (no automatic behavior yet)
+        # Sensor values
         self.oat: float = 15.0
         self.oat_overridden: bool = False
         self.temperature: float = 22.0
@@ -29,10 +70,48 @@ class Server:
         self.light_level: float = 0.0
         self.light_level_overridden: bool = False
 
+        # Daily jitter offsets (re-randomized each simulated day)
+        self._occupancy_start_offset: float = 0.0
+        self._occupancy_end_offset: float = 0.0
+        self._light_start_offset: float = 0.0
+        self._light_end_offset: float = 0.0
+        self._randomize_day()
+
+    def _randomize_day(self):
+        """Pick fresh random offsets for the new simulated day."""
+        self._occupancy_start_offset = random.uniform(
+            -OCCUPANCY_JITTER, OCCUPANCY_JITTER
+        )
+        self._occupancy_end_offset = random.uniform(
+            -OCCUPANCY_JITTER, OCCUPANCY_JITTER
+        )
+        self._light_start_offset = random.uniform(-LIGHT_JITTER, LIGHT_JITTER)
+        self._light_end_offset = random.uniform(-LIGHT_JITTER, LIGHT_JITTER)
+
     def tick(self):
         """Advance simulation by one second. Called once per second."""
+        prev_time = self.time
         if not self.time_overridden:
             self.time = (self.time + self.time_rate) % MINUTES_PER_DAY
+            if self.time < prev_time:
+                self._randomize_day()
+
+        if not self.oat_overridden:
+            self.oat = compute_oat(self.time)
+
+        if not self.temperature_overridden:
+            diff = self.oat - self.temperature
+            self.temperature += diff * THERMAL_RATE * self.time_rate
+
+        if not self.occupancy_overridden:
+            start = BUSINESS_START + self._occupancy_start_offset
+            end = BUSINESS_END + self._occupancy_end_offset
+            self.occupied = start <= self.time < end
+
+        if not self.light_level_overridden:
+            self.light_level = compute_light_level(
+                self.time, self._light_start_offset, self._light_end_offset
+            )
 
     def handle_message(self, topic_suffix: str, payload: str):
         """Process an incoming MQTT message. topic_suffix is relative to base_topic."""
@@ -89,7 +168,7 @@ class Server:
         while True:
             await asyncio.sleep(1)
             self.tick()
-            await self._publish_time()
+            await self._publish_all()
 
     async def _message_loop(self):
         async for msg in self._client.messages:
