@@ -1,7 +1,7 @@
 import { reactive, ref } from "vue";
 import mqtt from "mqtt";
 
-const BASE_TOPIC = "bms_sim";
+const BASE_TOPIC = "bms_sim/";
 
 export function useMqtt() {
   const state = reactive({
@@ -16,6 +16,13 @@ export function useMqtt() {
     occupancyOverridden: false,
     lightLevel: 0,
     lightLevelOverridden: false,
+    // Actuators
+    heat: false,
+    airCon: false,
+    lights: false,
+    // Power tracking
+    powerUsage: 0,
+    cumulativePowerUsage: 0,
   });
 
   const connected = ref(false);
@@ -28,7 +35,7 @@ export function useMqtt() {
 
   client.on("connect", () => {
     connected.value = true;
-    client.subscribe(`${BASE_TOPIC}/#`);
+    client.subscribe(`${BASE_TOPIC}#`);
   });
 
   client.on("close", () => {
@@ -36,22 +43,30 @@ export function useMqtt() {
   });
 
   const topicMap = {
-    [`${BASE_TOPIC}/time`]: (v) => (state.time = parseFloat(v)),
-    [`${BASE_TOPIC}/time/rate`]: (v) => (state.timeRate = parseFloat(v)),
-    [`${BASE_TOPIC}/time/overridden`]: (v) =>
+    [`${BASE_TOPIC}time`]: (v) => (state.time = parseFloat(v)),
+    [`${BASE_TOPIC}time/rate`]: (v) => (state.timeRate = parseFloat(v)),
+    [`${BASE_TOPIC}time/overridden`]: (v) =>
       (state.timeOverridden = v === "true"),
-    [`${BASE_TOPIC}/oat`]: (v) => (state.oat = parseFloat(v)),
-    [`${BASE_TOPIC}/oat/overridden`]: (v) =>
+    [`${BASE_TOPIC}oat`]: (v) => (state.oat = parseFloat(v)),
+    [`${BASE_TOPIC}oat/overridden`]: (v) =>
       (state.oatOverridden = v === "true"),
-    [`${BASE_TOPIC}/temperature`]: (v) => (state.temperature = parseFloat(v)),
-    [`${BASE_TOPIC}/temperature/overridden`]: (v) =>
+    [`${BASE_TOPIC}temperature`]: (v) => (state.temperature = parseFloat(v)),
+    [`${BASE_TOPIC}temperature/overridden`]: (v) =>
       (state.temperatureOverridden = v === "true"),
-    [`${BASE_TOPIC}/occupancy`]: (v) => (state.occupancy = v === "true"),
-    [`${BASE_TOPIC}/occupancy/overridden`]: (v) =>
+    [`${BASE_TOPIC}occupancy`]: (v) => (state.occupancy = v === "true"),
+    [`${BASE_TOPIC}occupancy/overridden`]: (v) =>
       (state.occupancyOverridden = v === "true"),
-    [`${BASE_TOPIC}/light_level`]: (v) => (state.lightLevel = parseFloat(v)),
-    [`${BASE_TOPIC}/light_level/overridden`]: (v) =>
+    [`${BASE_TOPIC}light_level`]: (v) => (state.lightLevel = parseFloat(v)),
+    [`${BASE_TOPIC}light_level/overridden`]: (v) =>
       (state.lightLevelOverridden = v === "true"),
+    // Actuators
+    [`${BASE_TOPIC}heat`]: (v) => (state.heat = v === "true"),
+    [`${BASE_TOPIC}air_con`]: (v) => (state.airCon = v === "true"),
+    [`${BASE_TOPIC}lights`]: (v) => (state.lights = v === "true"),
+    // Power tracking
+    [`${BASE_TOPIC}power_usage`]: (v) => (state.powerUsage = parseFloat(v)),
+    [`${BASE_TOPIC}cumulative_power_usage`]: (v) =>
+      (state.cumulativePowerUsage = parseFloat(v)),
   };
 
   client.on("message", (topic, message) => {
@@ -62,7 +77,7 @@ export function useMqtt() {
   });
 
   function publish(topicSuffix, value) {
-    client.publish(`${BASE_TOPIC}/${topicSuffix}`, String(value));
+    client.publish(`${BASE_TOPIC}${topicSuffix}`, String(value));
   }
 
   return { state, connected, publish };
