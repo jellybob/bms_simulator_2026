@@ -222,6 +222,8 @@ class Server:
     async def _tick_loop(self):
         while True:
             await asyncio.sleep(1)
+            if self.time_rate == 0:
+                continue
             self.tick()
             await self._publish_all()
 

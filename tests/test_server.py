@@ -54,6 +54,17 @@ def test_tick_rate_change():
     assert server.time == initial + 5.0
 
 
+def test_tick_at_zero_rate_does_not_advance_time_or_accumulate_power():
+    server = make_server()
+    server.time_rate = 0.0
+    server.actuators["heat"].on = True
+    initial_time = server.time
+    initial_cumulative = server.cumulative_power_usage
+    server.tick()
+    assert server.time == initial_time
+    assert server.cumulative_power_usage == initial_cumulative
+
+
 def test_handle_time_set():
     server = make_server()
     server.handle_message("time/set", "720")
